@@ -4,7 +4,7 @@
   "description": "Invite-only access API for Capital Eye — email verification + SMS confirmation gate.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "npx prisma migrate deploy --schema=db/schema.prisma && node server.js",
     "postinstall": "prisma generate --schema=db/schema.prisma"
   },
   "dependencies": {
