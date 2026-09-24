@@ -1,6 +1,15 @@
 // Minimal schema for the invite-only flow. Swap for your ORM of choice —
 // the shape is what matters: every user traces back to exactly one invite.
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
 model Invite {
   id          String   @id @default(cuid())
   name        String
