@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema=db/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
