@@ -1,0 +1,25 @@
+{
+  "name": "capital-eye-api",
+  "version": "1.0.0",
+  "description": "Invite-only access API for Capital Eye — email verification + SMS confirmation gate.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.1",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "twilio": "^5.3.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.19.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
