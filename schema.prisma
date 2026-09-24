@@ -1,0 +1,46 @@
+// Minimal schema for the invite-only flow. Swap for your ORM of choice —
+// the shape is what matters: every user traces back to exactly one invite.
+
+model Invite {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String
+  role        String   // "investor" | "client"
+  token       String   @unique   // random, single-use, sent in the email link
+  source      String   // "manual" | "bulk_import" | "approved_application"
+  status      String   @default("pending") // pending | consumed | expired | revoked
+  invitedBy   String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  user        User?
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  inviteId            String   @unique
+  invite              Invite   @relation(fields: [inviteId], references: [id])
+  name                String
+  email               String   @unique
+  phone               String
+  passwordHash        String
+  emailVerified        Boolean  @default(false)
+  verificationCodeHash String?
+  verificationExpires  DateTime?
+  verificationAttempts Int      @default(0)
+  smsConfirmedAt        DateTime?
+  role                 String
+  createdAt            DateTime @default(now())
+}
+
+// Applications feed the "approve applicant" intake path. They never
+// touch Invite/User until an admin approves them.
+model Application {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  note      String?
+  status    String   @default("pending") // pending | approved | rejected
+  createdAt DateTime @default(now())
+}

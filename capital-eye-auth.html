@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capital Eye — Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --carbon:#0B0C0E; --graphite:#17181B; --panel:#1D1F23;
+  --line:#2C2E33; --line-soft:#232529;
+  --ash:#8B8F98; --ash-dim:#5B5E65;
+  --gold:#B9974A; --gold-bright:#D9BC7E;
+  --white:#F3F1EC;
+  --err:#B5583C;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html,body{height:100%; margin:0;}
+body{
+  background:
+    radial-gradient(1100px 500px at 50% -10%, rgba(185,151,74,.07), transparent 60%),
+    var(--carbon);
+  color:var(--white); font-family:'Inter',system-ui,sans-serif;
+  display:flex; align-items:center; justify-content:center; padding:32px 20px;
+}
+.stage{width:100%; max-width:420px;}
+.mark{display:flex; align-items:center; gap:11px; justify-content:center; margin-bottom:34px;}
+.mark svg{width:26px; height:26px;}
+.mark span{font-family:'Fraunces',serif; font-size:19px; letter-spacing:.5px; font-weight:500;}
+.mark small{display:block; text-align:center; color:var(--ash-dim); font-size:10.5px; letter-spacing:2px; margin-top:3px;}
+
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:3px;
+  padding:38px 34px; position:relative;
+}
+.card::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+h1{font-family:'Fraunces',serif; font-weight:500; font-size:22px; margin:0 0 8px; letter-spacing:.2px;}
+.sub{color:var(--ash); font-size:13.5px; line-height:1.55; margin:0 0 26px;}
+
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:11px; color:var(--ash-dim); letter-spacing:.3px; margin-bottom:7px;}
+.field input{
+  width:100%; background:var(--graphite); border:1px solid var(--line);
+  color:var(--white); padding:12px 13px; font:inherit; font-size:14px; border-radius:2px;
+}
+.field input:focus{outline:none; border-color:var(--gold);}
+.field input:disabled{color:var(--ash); border-color:var(--line-soft);}
+.field input::placeholder{color:var(--ash-dim);}
+
+button{width:100%; font:inherit; cursor:pointer; border:none; border-radius:2px; padding:13px; font-size:13.5px; letter-spacing:.3px; font-weight:500;}
+.btn-gold{background:var(--gold); color:#141414;}
+.btn-gold:hover{background:var(--gold-bright);}
+.btn-gold:disabled{background:var(--ash-dim); cursor:not-allowed;}
+.link{background:none; color:var(--ash); text-decoration:underline; padding:10px 0; font-size:12.5px;}
+
+.foot{text-align:center; margin-top:22px; color:var(--ash-dim); font-size:11.5px; letter-spacing:.2px;}
+
+.gate-icon{width:38px; height:38px; margin:0 auto 18px; display:block;}
+
+.code-row{display:flex; gap:8px; margin:6px 0 22px;}
+.code-row input{width:100%; text-align:center; font-size:18px; padding:12px 0;}
+
+.err{background:rgba(181,88,60,.12); border:1px solid rgba(181,88,60,.4); color:#E3A491; font-size:12.5px; padding:10px 12px; border-radius:2px; margin-bottom:16px; display:none;}
+
+.success{text-align:center;}
+.success .check{width:44px; height:44px; margin:0 auto 20px;}
+.pill{display:inline-block; border:1px solid var(--line); color:var(--ash); font-size:11px; letter-spacing:.4px; padding:5px 11px; border-radius:20px; margin-bottom:18px;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="mark">
+    <svg viewBox="0 0 32 32" fill="none"><path d="M2 16C6 8 12 5 16 5C20 5 26 8 30 16C26 24 20 27 16 27C12 27 6 24 2 16Z" stroke="#B9974A" stroke-width="1.4"/><circle cx="16" cy="16" r="5.4" stroke="#B9974A" stroke-width="1.4"/><circle cx="16" cy="16" r="1.6" fill="#B9974A"/></svg>
+    <div><span>CAPITAL EYE</span><small>PRIVATE PORTAL</small></div>
+  </div>
+  <div class="card" id="card"></div>
+  <div class="foot" id="foot">Access by invitation only</div>
+</div>
+
+<script>
+// Point this at your deployed API (see the invite-portal-api scaffold / README).
+const API_BASE = 'https://your-api-domain.example.com';
+
+const params = new URLSearchParams(location.search);
+const inviteToken = params.get('invite');
+let invite = null;   // { name, email, role } — filled from GET /api/auth/invite/:token
+let userId = null;   // returned by /api/auth/signup, needed by /api/auth/verify
+
+async function api(path, opts){
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  let body = null;
+  try { body = await res.json(); } catch {}
+  if(!res.ok) throw new Error(body?.error || 'request_failed');
+  return body;
+}
+
+function render(view, data={}){
+  const c = document.getElementById('card');
+  const foot = document.getElementById('foot');
+  if(view==='loading'){
+    foot.textContent = '';
+    c.innerHTML = `<p class="sub" style="text-align:center;">Checking your invitation…</p>`;
+  }
+  if(view==='gate'){
+    foot.textContent = 'Access by invitation only';
+    c.innerHTML = `
+      <svg class="gate-icon" viewBox="0 0 32 32" fill="none"><rect x="8" y="14" width="16" height="12" rx="1" stroke="#5B5E65" stroke-width="1.3"/><path d="M11 14v-3a5 5 0 0110 0v3" stroke="#5B5E65" stroke-width="1.3"/></svg>
+      <h1 style="text-align:center;">This is a private portal</h1>
+      <p class="sub" style="text-align:center;">Capital Eye is accessible by invitation only. If you're expecting access, check the email address your contact has on file, or the link may have expired.</p>
+    `;
+  }
+  if(view==='signup'){
+    foot.textContent = `Invited as ${invite.role.toLowerCase()} · link expires in 7 days`;
+    c.innerHTML = `
+      <h1>Set up your account</h1>
+      <p class="sub">Your details are confirmed from your invitation and locked.</p>
+      <div class="err" id="serr"></div>
+      <div class="field"><label>NAME</label><input value="${invite.name}" disabled></div>
+      <div class="field"><label>EMAIL</label><input value="${invite.email}" disabled></div>
+      <div class="field"><label>PASSWORD</label><input type="password" id="pw" placeholder="Minimum 10 characters"></div>
+      <button class="btn-gold" id="signup-btn" onclick="doSignup()">Continue</button>
+    `;
+  }
+  if(view==='verify'){
+    foot.textContent = 'Code sent to ' + invite.email;
+    c.innerHTML = `
+      <h1>Verify your email</h1>
+      <p class="sub">Enter the 6-digit code we just sent to ${invite.email}. It expires in 10 minutes.</p>
+      <div class="err" id="verr"></div>
+      <div class="code-row">${[0,1,2,3,4,5].map(()=>`<input maxlength="1" class="code" inputmode="numeric" oninput="advance(this)">`).join('')}</div>
+      <button class="btn-gold" id="verify-btn" onclick="doVerify()">Verify &amp; continue</button>
+    `;
+  }
+  if(view==='success'){
+    foot.textContent = 'capitaleye.example.com';
+    c.innerHTML = `
+      <div class="success">
+        <svg class="check" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="20" stroke="#B9974A" stroke-width="1.4"/><path d="M14 22l5.5 5.5L30.5 16" stroke="#B9974A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="pill">Account active</div>
+        <h1>You're in, ${invite.name.split(' ')[0]}</h1>
+        <p class="sub">A confirmation text just went to your phone on file. Use it to sign in from any device.</p>
+        <button class="btn-gold" onclick="location.href='/dashboard'">Enter dashboard →</button>
+      </div>
+    `;
+  }
+}
+
+function showError(id, msg){
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function doSignup(){
+  const pw = document.getElementById('pw').value;
+  if(pw.length < 10){ showError('serr', 'Password must be at least 10 characters.'); return; }
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try{
+    const data = await api('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ token: inviteToken, password: pw }),
+    });
+    userId = data.userId;
+    render('verify');
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Continue';
+    showError('serr', e.message === 'invalid_or_expired_invite'
+      ? 'This invite link is no longer valid.' : 'Something went wrong. Try again.');
+  }
+}
+
+function advance(el){
+  if(el.value && el.nextElementSibling && el.nextElementSibling.classList.contains('code')) el.nextElementSibling.focus();
+}
+
+async function doVerify(){
+  const code = [...document.querySelectorAll('.code')].map(i=>i.value).join('');
+  if(code.length < 6){ showError('verr', 'Enter all 6 digits.'); return; }
+  const btn = document.getElementById('verify-btn');
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try{
+    const data = await api('/api/auth/verify', {
+      method: 'POST',
+      body: JSON.stringify({ userId, code }),
+    });
+    // Session token for subsequent dashboard requests.
+    try{ localStorage.setItem('ce_session', data.token); }catch{}
+    render('success');
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Verify & continue';
+    const messages = {
+      incorrect_code: 'Incorrect code. Try again.',
+      code_expired: 'This code has expired. Request a new one.',
+      too_many_attempts: 'Too many attempts. Please request a new code.',
+    };
+    showError('verr', messages[e.message] || 'Something went wrong. Try again.');
+  }
+}
+
+// Entry point: validate the invite token against the real API before
+// anything else renders — this is the actual gate, not just a UI state.
+(async function init(){
+  if(!inviteToken){ render('gate'); return; }
+  render('loading');
+  try{
+    invite = await api('/api/auth/invite/' + encodeURIComponent(inviteToken));
+    render('signup');
+  }catch{
+    render('gate');
+  }
+})();
+</script>
+</body>
+</html>
